@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}分类管理 - 家庭记账系统{% endblock %}
+
+{% block content %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h2><i class="fas fa-tags me-2"></i>分类管理</h2>
+                <p class="text-muted mb-0">管理您的收支分类，让记账更有条理。</p>
+            </div>
+            <div>
+                <a href="{{ url_for('clean_categories') }}" class="btn btn-outline-warning" 
+                   onclick="return confirm('确定要清理重复的系统分类吗？这个操作不可撤销。')">
+                    <i class="fas fa-broom me-1"></i>清理重复分类
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加分类表单 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-plus me-2"></i>添加新分类</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('add_category') }}" class="row g-3">
+                    <div class="col-md-4">
+                        <label for="name" class="form-label">分类名称</label>
+                        <input type="text" class="form-control" id="name" name="name" required placeholder="输入分类名称">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="type" class="form-label">分类类型</label>
+                        <select class="form-select" id="type" name="type" required>
+                            <option value="">请选择类型</option>
+                            <option value="income">收入</option>
+                            <option value="expense">支出</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-plus me-1"></i>添加分类
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 分类列表 -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-arrow-up me-2"></i>收入分类</h5>
+            </div>
+            <div class="card-body">
+                {% set income_categories = categories|selectattr("type", "equalto", "income")|list %}
+                {% if income_categories %}
+                <div class="list-group list-group-flush">
+                    {% for category in income_categories %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <i class="fas fa-tag me-2 text-success"></i>
+                            {{ category.name }}
+                        </span>
+                        {% if category.user_id %}
+                        <span class="badge bg-primary">自定义</span>
+                        {% else %}
+                        <span class="badge bg-secondary">系统</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
+                    <p class="text-muted mb-0">暂无收入分类</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="fas fa-arrow-down me-2"></i>支出分类</h5>
+            </div>
+            <div class="card-body">
+                {% set expense_categories = categories|selectattr("type", "equalto", "expense")|list %}
+                {% if expense_categories %}
+                <div class="list-group list-group-flush">
+                    {% for category in expense_categories %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <i class="fas fa-tag me-2 text-danger"></i>
+                            {{ category.name }}
+                        </span>
+                        {% if category.user_id %}
+                        <span class="badge bg-primary">自定义</span>
+                        {% else %}
+                        <span class="badge bg-secondary">系统</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
+                    <p class="text-muted mb-0">暂无支出分类</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 说明信息 -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <h6 class="alert-heading"><i class="fas fa-info-circle me-2"></i>分类说明</h6>
+            <ul class="mb-0">
+                <li><strong>系统分类</strong>：系统预设的常用分类，所有用户共享</li>
+                <li><strong>自定义分类</strong>：您创建的个人分类，只有您可以使用</li>
+                <li>添加交易记录时，可以选择任何可用的分类</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %} 

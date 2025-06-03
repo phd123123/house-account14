@@ -1,0 +1,429 @@
+{% extends "base.html" %}
+
+{% block title %}统计分析 - 家庭记账系统{% endblock %}
+
+{% block content %}
+<div class="row mt-4">
+    <div class="col-12">
+        <h2><i class="fas fa-chart-bar me-2"></i>统计分析</h2>
+        <p class="text-muted">通过图表和数据分析，了解您的财务状况。</p>
+    </div>
+</div>
+
+<!-- 筛选条件 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-filter me-2"></i>筛选条件</h6>
+            </div>
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-4">
+                        <label for="year" class="form-label">年份</label>
+                        <select class="form-select" id="year" name="year">
+                            {% for y in range(2020, 2030) %}
+                            <option value="{{ y }}" {{ 'selected' if y == current_year|int }}>{{ y }}年</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="month" class="form-label">月份（可选）</label>
+                        <select class="form-select" id="month" name="month">
+                            <option value="">全年</option>
+                            {% for m in range(1, 13) %}
+                            <option value="{{ '%02d'|format(m) }}" {{ 'selected' if '%02d'|format(m) == current_month }}>
+                                {{ m }}月
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search me-1"></i>查询
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 分类统计 -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">收入分类统计</h6>
+            </div>
+            <div class="card-body">
+                {% set income_stats = category_stats|selectattr("type", "equalto", "income")|list %}
+                {% if income_stats %}
+                <div id="incomeChart" style="width: 100%; height: 350px;" 
+                     data-chart-data='[{% for stat in income_stats %}{"name":"{{ stat.name }}","value":{{ stat.total }}}{{ "," if not loop.last }}{% endfor %}]'></div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-chart-pie fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">暂无收入数据</p>
+                    <small class="text-muted">添加一些收入记录后，这里将显示收入分类统计图表</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">支出分类统计</h6>
+            </div>
+            <div class="card-body">
+                {% set expense_stats = category_stats|selectattr("type", "equalto", "expense")|list %}
+                {% if expense_stats %}
+                <div id="expenseChart" style="width: 100%; height: 350px;"
+                     data-chart-data='[{% for stat in expense_stats %}{"name":"{{ stat.name }}","value":{{ stat.total }}}{{ "," if not loop.last }}{% endfor %}]'></div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-chart-pie fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">暂无支出数据</p>
+                    <small class="text-muted">添加一些支出记录后，这里将显示支出分类统计图表</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 月度趋势 -->
+{% if not current_month %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">{{ current_year }}年月度收支趋势</h6>
+            </div>
+            <div class="card-body">
+                {% if monthly_stats %}
+                <div id="monthlyChart" style="width: 100%; height: 400px;"
+                     data-monthly-data='[{% for stat in monthly_stats %}{"month":"{{ stat.month }}","type":"{{ stat.type }}","total":{{ stat.total }}}{{ "," if not loop.last }}{% endfor %}]'
+                     data-year="{{ current_year }}"></div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">暂无月度数据</p>
+                    <small class="text-muted">添加一些交易记录后，这里将显示月度收支趋势图</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- 详细数据表格 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">详细统计数据</h6>
+            </div>
+            <div class="card-body">
+                {% if category_stats %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>分类</th>
+                                <th>类型</th>
+                                <th>金额</th>
+                                <th>占比</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set total_income = category_stats|selectattr("type", "equalto", "income")|sum(attribute="total") %}
+                            {% set total_expense = category_stats|selectattr("type", "equalto", "expense")|sum(attribute="total") %}
+                            {% for stat in category_stats %}
+                            <tr>
+                                <td>
+                                    <i class="fas fa-tag me-2 {{ 'text-success' if stat.type == 'income' else 'text-danger' }}"></i>
+                                    {{ stat.name }}
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if stat.type == 'income' else 'danger' }}">
+                                        {{ '收入' if stat.type == 'income' else '支出' }}
+                                    </span>
+                                </td>
+                                <td class="{{ 'income' if stat.type == 'income' else 'expense' }}">
+                                    ¥{{ "%.2f"|format(stat.total) }}
+                                </td>
+                                <td>
+                                    {% set total = total_income if stat.type == 'income' else total_expense %}
+                                    {% if total > 0 %}
+                                    {{ "%.1f"|format((stat.total / total) * 100) }}%
+                                    {% else %}
+                                    0%
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-secondary">
+                                <th colspan="2">总计</th>
+                                <th class="income">收入：¥{{ "%.2f"|format(total_income) }}</th>
+                                <th class="expense">支出：¥{{ "%.2f"|format(total_expense) }}</th>
+                            </tr>
+                            <tr class="table-info">
+                                <th colspan="2">结余</th>
+                                <th colspan="2" class="{{ 'income' if (total_income - total_expense) >= 0 else 'expense' }}">
+                                    ¥{{ "%.2f"|format(total_income - total_expense) }}
+                                </th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-table fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">暂无统计数据</p>
+                    <p class="text-muted">
+                        <a href="{{ url_for('add_transaction') }}" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i>添加第一笔记录
+                        </a>
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- ECharts CDN -->
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 检查ECharts是否加载
+    if (typeof echarts === 'undefined') {
+        console.error('ECharts 未加载');
+        return;
+    }
+
+    console.log('ECharts 已加载，开始初始化图表...');
+
+    // 收入饼图
+    const incomeChartElement = document.getElementById('incomeChart');
+    if (incomeChartElement && incomeChartElement.dataset.chartData) {
+        try {
+            const incomeData = JSON.parse(incomeChartElement.dataset.chartData);
+            console.log('收入数据:', incomeData);
+            
+            const incomeChart = echarts.init(incomeChartElement);
+            const incomeColors = ['#28a745', '#20c997', '#17a2b8', '#6f42c1', '#e83e8c', '#fd7e14', '#ffc107', '#6c757d', '#343a40', '#007bff'];
+            
+            const incomeOption = {
+                tooltip: {
+                    trigger: 'item',
+                    formatter: '{a} <br/>{b}: ¥{c} ({d}%)'
+                },
+                legend: {
+                    orient: 'horizontal',
+                    bottom: '10',
+                    type: 'scroll'
+                },
+                series: [{
+                    name: '收入分类',
+                    type: 'pie',
+                    radius: ['40%', '70%'],
+                    center: ['50%', '50%'],
+                    data: incomeData.map((item, index) => ({
+                        ...item,
+                        itemStyle: {
+                            color: incomeColors[index % incomeColors.length]
+                        }
+                    })),
+                    emphasis: {
+                        itemStyle: {
+                            shadowBlur: 10,
+                            shadowOffsetX: 0,
+                            shadowColor: 'rgba(0, 0, 0, 0.5)'
+                        }
+                    }
+                }]
+            };
+            
+            incomeChart.setOption(incomeOption);
+            
+            // 响应式
+            window.addEventListener('resize', function() {
+                incomeChart.resize();
+            });
+            
+            console.log('收入图表创建成功');
+        } catch (error) {
+            console.error('收入图表创建失败:', error);
+        }
+    }
+
+    // 支出饼图
+    const expenseChartElement = document.getElementById('expenseChart');
+    if (expenseChartElement && expenseChartElement.dataset.chartData) {
+        try {
+            const expenseData = JSON.parse(expenseChartElement.dataset.chartData);
+            console.log('支出数据:', expenseData);
+            
+            const expenseChart = echarts.init(expenseChartElement);
+            const expenseColors = ['#dc3545', '#fd7e14', '#ffc107', '#6f42c1', '#e83e8c', '#28a745', '#20c997', '#17a2b8', '#6c757d', '#343a40'];
+            
+            const expenseOption = {
+                tooltip: {
+                    trigger: 'item',
+                    formatter: '{a} <br/>{b}: ¥{c} ({d}%)'
+                },
+                legend: {
+                    orient: 'horizontal',
+                    bottom: '10',
+                    type: 'scroll'
+                },
+                series: [{
+                    name: '支出分类',
+                    type: 'pie',
+                    radius: ['40%', '70%'],
+                    center: ['50%', '50%'],
+                    data: expenseData.map((item, index) => ({
+                        ...item,
+                        itemStyle: {
+                            color: expenseColors[index % expenseColors.length]
+                        }
+                    })),
+                    emphasis: {
+                        itemStyle: {
+                            shadowBlur: 10,
+                            shadowOffsetX: 0,
+                            shadowColor: 'rgba(0, 0, 0, 0.5)'
+                        }
+                    }
+                }]
+            };
+            
+            expenseChart.setOption(expenseOption);
+            
+            // 响应式
+            window.addEventListener('resize', function() {
+                expenseChart.resize();
+            });
+            
+            console.log('支出图表创建成功');
+        } catch (error) {
+            console.error('支出图表创建失败:', error);
+        }
+    }
+
+    // 月度趋势图
+    const monthlyChartElement = document.getElementById('monthlyChart');
+    if (monthlyChartElement && monthlyChartElement.dataset.monthlyData) {
+        try {
+            const monthlyData = JSON.parse(monthlyChartElement.dataset.monthlyData);
+            const year = monthlyChartElement.dataset.year;
+            console.log('月度数据:', monthlyData);
+            
+            const monthlyChart = echarts.init(monthlyChartElement);
+            
+            // 处理月度数据
+            const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+            const incomeData = new Array(12).fill(0);
+            const expenseData = new Array(12).fill(0);
+
+            monthlyData.forEach(stat => {
+                const monthIndex = parseInt(stat.month.split('-')[1]) - 1;
+                if (stat.type === 'income') {
+                    incomeData[monthIndex] = stat.total;
+                } else {
+                    expenseData[monthIndex] = stat.total;
+                }
+            });
+
+            const monthlyOption = {
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'cross'
+                    },
+                    formatter: function(params) {
+                        let result = params[0].name + '<br/>';
+                        params.forEach(function(item) {
+                            result += item.marker + item.seriesName + ': ¥' + item.value.toFixed(2) + '<br/>';
+                        });
+                        return result;
+                    }
+                },
+                legend: {
+                    data: ['收入', '支出'],
+                    top: '10'
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    top: '15%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    boundaryGap: false,
+                    data: months
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLabel: {
+                        formatter: '¥{value}'
+                    }
+                },
+                series: [
+                    {
+                        name: '收入',
+                        type: 'line',
+                        smooth: true,
+                        data: incomeData,
+                        itemStyle: {
+                            color: '#28a745'
+                        },
+                        areaStyle: {
+                            opacity: 0.3
+                        }
+                    },
+                    {
+                        name: '支出',
+                        type: 'line',
+                        smooth: true,
+                        data: expenseData,
+                        itemStyle: {
+                            color: '#dc3545'
+                        },
+                        areaStyle: {
+                            opacity: 0.3
+                        }
+                    }
+                ]
+            };
+            
+            monthlyChart.setOption(monthlyOption);
+            
+            // 响应式
+            window.addEventListener('resize', function() {
+                monthlyChart.resize();
+            });
+            
+            console.log('月度趋势图创建成功');
+        } catch (error) {
+            console.error('月度趋势图创建失败:', error);
+        }
+    }
+});
+</script>
+{% endblock %}
